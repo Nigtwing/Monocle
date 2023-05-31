@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "230818435364",
+    "firebase_url": "https://monocle-18620-default-rtdb.firebaseio.com",
+    "project_id": "monocle-18620",
+    "storage_bucket": "monocle-18620.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:230818435364:android:8b22eba2409b4b137ae3b1",
+        "android_client_info": {
+          "package_name": "com.techno.monocle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDun-IDM3ObJOJ_Yp66B2BhHe8DUXWIHX0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:230818435364:android:26a36a56d62f9e117ae3b1",
+        "android_client_info": {
+          "package_name": "com.techno.monocle"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDun-IDM3ObJOJ_Yp66B2BhHe8DUXWIHX0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
