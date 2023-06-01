@@ -26,6 +26,10 @@ class BluetoothActivity : AppCompatActivity() {
             "00:00:00:00:00:00" // Replace with actual MAC address
     }
 
+
+
+
+
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothSocket: BluetoothSocket? = null
 
@@ -73,6 +77,9 @@ class BluetoothActivity : AppCompatActivity() {
         super.onDestroy()
         closeBluetoothSocket()
     }
+
+
+
 
     private fun setupBluetooth() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
