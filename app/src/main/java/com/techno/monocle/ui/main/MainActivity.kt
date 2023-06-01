@@ -9,12 +9,17 @@ import android.app.PendingIntent
 import android.app.Service
 import android.app.Service.START_NOT_STICKY
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
+import android.util.Log
 import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.ListView
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -23,6 +28,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -33,6 +39,7 @@ import com.techno.monocle.data.db.remote.FirebaseDataSource
 import com.techno.monocle.util.forceHideKeyboard
 import com.google.android.material.badge.BadgeDrawable
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.techno.monocle.service.BluetoothBackgroundService
 
 
 class MainActivity : AppCompatActivity() {
@@ -42,7 +49,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mainToolbar: Toolbar
     private lateinit var notificationsBadge: BadgeDrawable
     private val viewModel: MainViewModel by viewModels()
-
+    private lateinit var bluetoothManager: BluetoothManager
+    private lateinit var bluetoothAdapter: BluetoothAdapter
+    private val LOCATION_PERMISSION_REQUEST = 123
+    private var listView: ListView? = null
+    private val BLUETOOTH_REQUEST_CODE = 2
+    private val bluetoothDevices: ArrayList<BluetoothDevice> = ArrayList()
+    private val mDeviceList = ArrayList<String>()
     companion object {
         private const val REQUEST_BLUETOOTH_PERMISSION = 1
     }
@@ -74,7 +87,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-     //   showNotification()
+        //   showNotification()
         // Request Bluetooth permissions
 //        ActivityCompat.requestPermissions(
 //            this,
@@ -85,21 +98,14 @@ class MainActivity : AppCompatActivity() {
 //            REQUEST_BLUETOOTH_PERMISSION
 //        )
 
-        val permissions = permissions()
-
-        if (permissions != null) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissions,
-                1)
-        };
-
-
-
-
-
-
-
+//        val permissions = permissions()
+//
+//        if (permissions != null) {
+//            ActivityCompat.requestPermissions(
+//                this,
+//                permissions,
+//                1)
+//        };
         mainToolbar = findViewById(R.id.main_toolbar)
         navView = findViewById(R.id.nav_view)
         mainProgressBar = findViewById(R.id.main_progressBar)
@@ -136,8 +142,119 @@ class MainActivity : AppCompatActivity() {
 
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+
+        bluetoothManager=getSystemService(BluetoothManager::class.java)
+        bluetoothAdapter=bluetoothManager.adapter
+
+
+        // Check if the permission is already granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission already granted
+            // Start using Bluetooth features
+            startBluetoothOperation()
+        } else {
+            // Permission is not granted
+            // Request the permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.BLUETOOTH_ADVERTISE,
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                ),
+                LOCATION_PERMISSION_REQUEST
+            )
+        }
+        /// Start Background Service
+        val serviceIntent = Intent(this, BluetoothBackgroundService::class.java)
+        this.startService(serviceIntent)
+
+    }
+    private fun startBluetoothOperation() {
+        // Start using Bluetooth features here
+        // Check if Bluetooth permission is granted
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Request Bluetooth permission
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN
+                ),
+                BLUETOOTH_REQUEST_CODE
+            )
+        } else {
+            // Permission is already granted, enable Bluetooth
+            enableBluetooth()
+        }
     }
 
+    private fun enableBluetooth() {
+        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        if (bluetoothAdapter == null) {
+            // Device doesn't support Bluetooth
+            // Handle the error here
+        } else {
+            // Enable Bluetooth
+            if (!bluetoothAdapter.isEnabled) {
+                val enableBluetoothIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                if (ActivityCompat.checkSelfPermission(
+                        this,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return
+                }
+                startActivityForResult(enableBluetoothIntent, BLUETOOTH_REQUEST_CODE)
+            } else {
+                // Bluetooth is already enabled
+                // Continue with your logic here
+
+                val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter.bondedDevices
+                pairedDevices?.forEach { device ->
+                    val deviceName = device.name
+                    val deviceHardwareAddress = device.address // MAC address
+                    Log.d("TAG", "enableBluetooth: "+deviceName)
+                    Log.d("TAG23", "enableBluetooth: "+deviceHardwareAddress)
+
+                    mDeviceList.add(device.getName() + "\n" + device.getAddress())
+                    Log.i("BT", device.getName() + "\n" + device.getAddress())
+//                    listView!!.adapter = ArrayAdapter<String>(
+//                        baseContext,
+//                        android.R.layout.simple_list_item_1, mDeviceList
+//                    )
+                }
+                Log.d("TAG", "enableBluetooth: ")
+
+            }
+        }
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == BLUETOOTH_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                // Bluetooth is enabled successfully
+                // Continue with your logic here
+            } else {
+                // Bluetooth enabling was canceled or failed
+                // Handle the error here
+            }
+        }
+    }
     override fun onPause() {
         super.onPause()
         FirebaseDataSource.dbInstance.goOffline()
@@ -202,7 +319,17 @@ class MainActivity : AppCompatActivity() {
         finish()
     }
 
-            }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        val serviceIntent = Intent(this, BluetoothBackgroundService::class.java)
+        this.stopService(serviceIntent)
+
+    }
+
+}
+
+
 
 class BluetoothPermissionService : Service() {
     override fun onBind(intent: Intent?): IBinder? {
